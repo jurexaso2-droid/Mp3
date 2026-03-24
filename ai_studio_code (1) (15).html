@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexRay Music Downloader</title>
+    <style>
+        :root {
+            --primary: #1DB954; /* Spotify Green */
+            --secondary: #FF0000; /* YouTube Red */
+            --dark: #121212;
+            --light: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+
+        .search-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        select, input, button {
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        input { background: #333; color: white; }
+
+        select { background: #333; color: white; cursor: pointer; }
+
+        button {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        button:disabled { background: #555; cursor: not-allowed; }
+
+        #status {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #bbb;
+        }
+
+        .result-card {
+            margin-top: 25px;
+            padding: 15px;
+            background: #282828;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result-card img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .song-title { font-weight: bold; font-size: 1.1rem; display: block; }
+        .song-info { color: #aaa; font-size: 0.85rem; margin-bottom: 15px; display: block; }
+
+        audio {
+            width: 100%;
+            height: 40px;
+            filter: invert(100%);
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎵 Music Downloader</h1>
+    
+    <div class="search-box">
+        <select id="type">
+            <option value="yt">YouTube</option>
+            <option value="spotify">Spotify</option>
+        </select>
+        <input type="text" id="query" placeholder="Enter song name or link...">
+        <button id="searchBtn">Download MP3</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div id="result" class="result-card">
+        <span class="song-title" id="resTitle">Song Title</span>
+        <span class="song-info" id="resMeta">Artist • Duration</span>
+        <audio id="audioPlayer" controls>
+            <source src="" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <br><br>
+        <a id="downloadLink" href="#" target="_blank" style="color: var(--primary); text-decoration: none; font-size: 0.9rem;">⬇️ Click here if download doesn't start</a>
+    </div>
+</div>
+
+<script>
+    // CONFIGURATION: Replace this with your actual NexRay API base URL
+    const API_BASE = "https://nexray.onrender.com"; // Example: https://nexray.onrender.com
+
+    const searchBtn = document.getElementById('searchBtn');
+    const queryInput = document.getElementById('query');
+    const typeSelect = document.getElementById('type');
+    const statusDiv = document.getElementById('status');
+    const resultDiv = document.getElementById('result');
+
+    searchBtn.addEventListener('click', async () => {
+        const query = queryInput.value.trim();
+        const type = typeSelect.value;
+
+        if (!query) {
+            alert("Please enter a song name!");
+            return;
+        }
+
+        // Reset UI
+        statusDiv.innerHTML = `🔍 Searching <b>${query}</b> on <b>${type.toUpperCase()}</b>...<br>⏳ Please wait...`;
+        resultDiv.style.display = 'none';
+        searchBtn.disabled = true;
+
+        try {
+            const apiUrl = `${API_BASE}/downloader/${type}play?q=${encodeURIComponent(query)}`;
+            
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (!data.status || !data.result?.download_url) {
+                throw new Error(data.message || "No results found.");
+            }
+
+            const r = data.result;
+            const performer = r.artist || r.channel || "Unknown Artist";
+
+            // Update UI with results
+            document.getElementById('resTitle').innerText = r.title;
+            document.getElementById('resMeta').innerText = `${performer} • ${r.duration || 'N/A'}`;
+            
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = r.download_url;
+            document.getElementById('downloadLink').href = r.download_url;
+
+            statusDiv.innerHTML = "✅ Found!";
+            resultDiv.style.display = 'block';
+            audioPlayer.play();
+
+        } catch (error) {
+            console.error(error);
+            statusDiv.innerHTML = "❌ Error: " + error.message;
+        } finally {
+            searchBtn.disabled = false;
+        }
+    });
+
+    // Allow "Enter" key to trigger search
+    queryInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+            searchBtn.click();
+        }
+    });
+</script>
+
+</body>
+</html>
